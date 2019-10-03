@@ -39,7 +39,7 @@ app.get("/", (req, res) => {
 app.get("/urls", (req, res) => {
   const id = req.session.user_id;
   if (urlsOwnedByUser(id, urlDatabase)) {
-    let templateVars = {urls: urlsOwnedByUser(id, urlDatabase), user: users[req.session.user_id]}
+    let templateVars = {urls: urlsOwnedByUser(id, urlDatabase), user: users[req.session.user_id], date: new Date().toLocaleString('en-US')}
     res.render("urls_index", templateVars);
   } else {
     let templateVars = {urls: "", user: ""}
@@ -98,7 +98,7 @@ app.get("/u/:shortURL", (req, res) => {
 
 app.post("/urls/new", (req, res) => {
   const newURLShort = generateNewShortUrl();
-  urlDatabase[newURLShort] = {longURL: req.body.longURL, userID: req.session.user_id};
+  urlDatabase[newURLShort] = {longURL: req.body.longURL, userID: req.session.user_id, date: new Date()};
   res.redirect(`/urls/${newURLShort}`);
 });
 

@@ -4,6 +4,10 @@ const PORT = 8080; // default port 8080
 const bodyParser = require("body-parser");
 const cookieSession = require('cookie-session');
 const bcrypt = require('bcrypt');
+const {getUserByEmail} = require('./helpers');
+const {checkURLOwner} = require('./helpers');
+const {urlsOwnedByUser} = require('./helpers');
+const {generateNewShortUrl} = require('./helpers');
 app.use(cookieSession({
   name: 'session',
   keys: ["key1", "key2"]}));
@@ -28,55 +32,14 @@ const urlDatabase = {
   "9sm5xK": {longURL: "http://www.google.com", userID: "user2RandomID"}
 };
 
-const UrlOwner = function(id) {
-  for (let shortURL in urlDatabase) {
-    if (urlDatabase[shortURL].userID === id) {
-      return true;
-    }
-  }
-  return false;
-}
-
-const urlsForUser = function (id) {
-  let URLOfUser = {};
-  for(let x in urlDatabase) {
-    if(urlDatabase[x].userID === id) {
-      URLOfUser[x] = urlDatabase[x].longURL;
-    }
-  }
-  if (URLOfUser === undefined) {
-    return false;
-  } else {
-    return URLOfUser;
-  }
-}
-
-const emailLookUp = function(email) {
-  for (let usr in users) {
-    if (email === users[usr].email) {
-      return users[usr];
-    };
-  };
-  return false;
-}
-
-function generateRandomString() {
-  let newShortUrl = "";
-  for (let i = 0; i < 6; i ++) {
-    letCodeAt = Math.random() * (123 - 97) + 97;
-    newShortUrl += String.fromCharCode(letCodeAt);
-  }
-  return newShortUrl;
-}
-
 app.get("/", (req, res) => {
   res.send("Hello!");
 });
 // url homepage
 app.get("/urls", (req, res) => {
   const id = req.session.user_id;
-  if (urlsForUser(id)) {
-    let templateVars = {urls: urlsForUser(id), user: users[req.session.user_id]}
+  if (urlsOwnedByUser(id, urlDatabase)) {
+    let templateVars = {urls: urlsOwnedByUser(id, urlDatabase), user: users[req.session.user_id]}
     res.render("urls_index", templateVars);
   } else {
     let templateVars = {urls: "", user: ""}
@@ -86,13 +49,12 @@ app.get("/urls", (req, res) => {
 
 app.post("/logout", (req, res) => {
   req.session = null;
-  // res.clearCookie("user_id", req.body.user_id);
   res.redirect("/login");
 })
 
 app.post("/login", (req, res) => {
   let userEmail = req.body.email;
-  let potentialUser = emailLookUp(userEmail);
+  let potentialUser = getUserByEmail(userEmail, users);
   if (!potentialUser) {
     res.send("Error 403: Email not found")
   }
@@ -113,8 +75,8 @@ app.post("/registration", (req, res) => {
   if (req.body.email === "" || req.body.password === "") {
     res.send("Error 400");
   };
-  if (!emailLookUp(req.body.email)) {
-    const tempUserID = generateRandomString();
+  if (!getUserByEmail(req.body.email, users)) {
+    const tempUserID = generateNewShortUrl();
     users[tempUserID] = {id:tempUserID, email:req.body.email, password: bcrypt.hashSync(req.body.password, 10)};
     req.session.user_id = tempUserID;
     res.redirect("/urls");
@@ -122,11 +84,11 @@ app.post("/registration", (req, res) => {
     res.send("Email already exists")
   }
 });
+
 app.get("/registration", (req, res) => {
   let templateVars = {urls: urlDatabase, user:users[req.session.user_id]}
   res.render("urls_registrationPage.ejs", templateVars);
 });
-
 
 app.get("/u/:shortURL", (req, res) => {
   const x = req.params.shortURL;
@@ -135,7 +97,7 @@ app.get("/u/:shortURL", (req, res) => {
 });
 
 app.post("/urls/new", (req, res) => {
-  const newURLShort = generateRandomString();
+  const newURLShort = generateNewShortUrl();
   urlDatabase[newURLShort] = {longURL: req.body.longURL, userID: req.session.user_id};
   res.redirect(`/urls/${newURLShort}`);
 });
@@ -151,31 +113,36 @@ app.get("/urls/new", (req, res) => {
 });
 
 app.get("/urls/:shortURL", (req, res) => {
-  let templateVars = {
-    shortURL: req.params.shortURL,
-    longURL: urlDatabase[req.params.shortURL].longURL,
-    user: users[req.session.user_id]
+  const id = req.session.user_id;
+  if (!checkURLOwner(id, urlDatabase)) {
+    res.send("User is not the creator of this URL")
+  } else {
+    let templateVars = {
+      shortURL: req.params.shortURL,
+      longURL: urlDatabase[req.params.shortURL].longURL,
+      user: users[req.session.user_id]
+    }
+    console.log(templateVars)
+    res.render("urls_show", templateVars);
   }
-  console.log(templateVars)
-  res.render("urls_show", templateVars);
 });
 
 app.post("/urls/:shortURL/edit", (req, res) => {
   const id = req.session.user_id;
-  if (UrlOwner(id)) {
-    res.redirect("/urls");
-  } else {
+  if (!checkURLOwner(id, urlDatabase)) {
     res.send("User is not the creator of this URL")
+  } else {
+    res.redirect("/urls/:shortURL");
   }
 });
 
 app.post("/urls/:shortURL/delete", (req, res) => {
   const id = req.session.user_id;
-  if (UrlOwner(id)) {
+  if (!checkURLOwner(id, urlDatabase)) {
+    res.send("User is not the creator of this URL")
+  } else {
     delete urlDatabase[req.params.shortURL];
     res.redirect("/urls");
-  } else {
-    res.send("User is not the creator of this URL")
   }
 })
 

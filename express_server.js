@@ -3,6 +3,7 @@ const app = express();
 const PORT = 8080; // default port 8080
 const bodyParser = require("body-parser");
 const cookieParser = require("cookie-parser");
+const bcrypt = require('bcrypt');
 app.use(cookieParser());
 app.use(bodyParser.urlencoded({extended: true}));
 app.set("view engine", "ejs");
@@ -11,12 +12,12 @@ const users = {
   "userRandomID": {
     id: "userRandomID", 
     email: "user@example.com", 
-    password: "purple-monkey-dinosaur"
+    password: "purple-monkey-dinosaur",
   },
  "user2RandomID": {
     id: "user2RandomID", 
     email: "user2@example.com", 
-    password: "dishwasher-funk"
+    password: "dishwasher-funk",
   }
 }
 
@@ -92,7 +93,7 @@ app.post("/login", (req, res) => {
   if (!potentialUser) {
     res.send("Error 403: Email not found")
   }
-  if (potentialUser.password === req.body.password) {
+  if (bcrypt.compareSync(req.body.password, password)) {
     res.cookie("user_id", potentialUser.id);
     res.redirect("/urls");
   } else {
@@ -111,7 +112,7 @@ app.post("/registration", (req, res) => {
   };
   if (!emailLookUp(req.body.email)) {
     const tempUserID = generateRandomString();
-    users[tempUserID] = {id:tempUserID, email:req.body.email, password:req.body.password};
+    users[tempUserID] = {id:tempUserID, email:req.body.email, password: bcrypt.hashSync(req.body.password, 10)};
     res.cookie("user_id", tempUserID)
     res.redirect("/urls");
   } else {

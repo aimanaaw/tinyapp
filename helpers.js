@@ -6,26 +6,24 @@ const getUserByEmail = function(checkEmail, database) {
   };
 }
 
-const checkURLOwner = function(id, urlDatabase) {
-  for (let shortURL in urlDatabase) {
-    if (urlDatabase[shortURL].userID === id) {
+const checkURLOwner = function(id, someURL, urlDatabase) {
+    if (urlDatabase[someURL].userID === id) {
       return true;
+    } else {
+      return false;
     }
-  }
 }
 
 const urlsOwnedByUser = function (id, urlDatabase) {
   let URLOfUser = {};
-  for(let x in urlDatabase) {
-    if(urlDatabase[x].userID === id) {
-      URLOfUser[x] = urlDatabase[x].longURL;
+  for(let url in urlDatabase) {
+    if(urlDatabase[url].userID === id) {
+      console.log(url);
+      URLOfUser[url] = urlDatabase[url].longURL;
     }
   }
-  if (URLOfUser === undefined) {
-    return false;
-  } else {
-    return URLOfUser;
-  }
+  console.log(URLOfUser);
+  return URLOfUser;
 }
 
 const generateNewShortUrl = function () {

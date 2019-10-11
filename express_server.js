@@ -4,10 +4,7 @@ const PORT = 8080; // default port 8080
 const bodyParser = require("body-parser");
 const cookieSession = require('cookie-session');
 const bcrypt = require('bcrypt');
-const {getUserByEmail} = require('./helpers');
-const {checkURLOwner} = require('./helpers');
-const {urlsOwnedByUser} = require('./helpers');
-const {generateNewShortUrl} = require('./helpers');
+const {getUserByEmail, checkURLOwner, urlsOwnedByUser, generateNewShortUrl} = require('./helpers');
 app.use(cookieSession({
   name: 'session',
   keys: ["key1", "key2"]}));
@@ -33,9 +30,9 @@ const urlDatabase = {
 };
 
 app.get("/", (req, res) => {
-  res.send("Hello!");
+  res.redirect("/urls");
 });
-// url homepage
+// The app's homepage
 app.get("/urls", (req, res) => {
   const id = req.session.user_id;
   if (urlsOwnedByUser(id, urlDatabase)) {
@@ -47,11 +44,13 @@ app.get("/urls", (req, res) => {
   }
 });
 
+// Post request for the user to logout
 app.post("/logout", (req, res) => {
   req.session = null;
   res.redirect("/login");
 })
 
+// Post request for the user to login
 app.post("/login", (req, res) => {
   let userEmail = req.body.email;
   let potentialUser = getUserByEmail(userEmail, users);
@@ -66,11 +65,13 @@ app.post("/login", (req, res) => {
   }
 })
 
+// Get request that takes the user to the login page
 app.get("/login", (req, res) => {
   let templateVars = {urls: urlDatabase, user:users[req.session.user_id]}
   res.render("urls_login.ejs", templateVars);
 })
 
+// Post request that allows a user to create an account
 app.post("/registration", (req, res) => {
   if (req.body.email === "" || req.body.password === "") {
     res.send("Error 400");
@@ -85,23 +86,27 @@ app.post("/registration", (req, res) => {
   }
 });
 
+// Get request that leads to the registration page and allows the user to create an account
 app.get("/registration", (req, res) => {
   let templateVars = {urls: urlDatabase, user:users[req.session.user_id]}
   res.render("urls_registrationPage.ejs", templateVars);
 });
 
+// Get request that leads to the longURL
 app.get("/u/:shortURL", (req, res) => {
-  const x = req.params.shortURL;
-  const longUrl = urlDatabase[x].longURL;
+  const shortURL = req.params.shortURL;
+  const longUrl = urlDatabase[shortURL].longURL;
   res.redirect(longUrl);
 });
 
+// Post request that allows the user to create a shortURL. If the user is logged in the URL will be saved in the database. Otherwise the user will just create a shortURL
 app.post("/urls/new", (req, res) => {
   const newURLShort = generateNewShortUrl();
   urlDatabase[newURLShort] = {longURL: req.body.longURL, userID: req.session.user_id, date: new Date()};
   res.redirect(`/urls/${newURLShort}`);
 });
 
+// Allows the user to create a short URL. User must be logged in
 app.get("/urls/new", (req, res) => {
   if (req.session.user_id) {
     let templateVars = {urls: urlDatabase, user:users[req.session["user_id"]]}
@@ -112,9 +117,10 @@ app.get("/urls/new", (req, res) => {
   }
 });
 
+// Get request to access a shortURL that is already in the database
 app.get("/urls/:shortURL", (req, res) => {
   const id = req.session.user_id;
-  if (!checkURLOwner(id, urlDatabase)) {
+  if (!checkURLOwner(id, req.params.shortURL, urlDatabase)) {
     res.send("User is not the creator of this URL")
   } else {
     let templateVars = {
@@ -122,38 +128,31 @@ app.get("/urls/:shortURL", (req, res) => {
       longURL: urlDatabase[req.params.shortURL].longURL,
       user: users[req.session.user_id]
     }
-    console.log(templateVars)
     res.render("urls_show", templateVars);
   }
 });
-
+// Post request that allows a user to edit a URL
 app.post("/urls/:shortURL/edit", (req, res) => {
   const id = req.session.user_id;
-  if (!checkURLOwner(id, urlDatabase)) {
+  if (!checkURLOwner(id, req.params.shortURL, urlDatabase)) {
     res.send("User is not the creator of this URL")
   } else {
-    res.redirect("/urls/:shortURL");
+    urlDatabase[req.params.shortURL].longURL = req.body.longURL;
+    res.redirect("/urls/" + req.params.shortURL);
   }
 });
 
+// Post request that allows the user to delete a saved URL only if it was created by the user
 app.post("/urls/:shortURL/delete", (req, res) => {
   const id = req.session.user_id;
-  if (!checkURLOwner(id, urlDatabase)) {
+  if (!checkURLOwner(id, req.params.shortURL, urlDatabase)) {
     res.send("User is not the creator of this URL")
   } else {
     delete urlDatabase[req.params.shortURL];
     res.redirect("/urls");
   }
 })
-
-app.get("/urls.json", (req, res) => {
-  res.json(urlDatabase);
-});
-
-app.get("/hello", (req, res) => {
-  res.send("<html><body>Hello <b>World</b></body></html>\n");
-});
-
+// Listens for connections on the given path. In this case the path is specified as PORT 8080
 app.listen(PORT, () => {
   console.log(`Example app listening on port ${PORT}!`);
 });

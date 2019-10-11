@@ -1,5 +1,19 @@
 *** Tiny App ***
 
+Setup:
+
+Go to "http://localhost:8080/urls";
+The middleware is set to listen to PORT: 8080 for connections
+
+This app requires the following dependencies:
+bcrypt: version 2.0.0
+body-parser: version 1.19.0
+cookie-session: version 1.3.3
+ejs: version 2.7.1
+express: version 4.17.1
+Please install these dependencies using npm
+
+
 Purpose: Allow users to shorten their URLs. This technique is usually used in websites such as Twitter which have a character limitation
 
 Functionality:

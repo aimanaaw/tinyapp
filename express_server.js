@@ -11,23 +11,8 @@ app.use(cookieSession({
 app.use(bodyParser.urlencoded({extended: true}));
 app.set("view engine", "ejs");
 
-const users = { 
-  "userRandomID": {
-    id: "userRandomID", 
-    email: "user@example.com", 
-    password: bcrypt.hashSync("purple-monkey-dinosaur", 10)
-  },
- "user2RandomID": {
-    id: "user2RandomID", 
-    email: "user2@example.com", 
-    password: bcrypt.hashSync("dishwasher-funk", 10)
-  }
-}
-
-const urlDatabase = {
-  "b2xVn2": {longURL: "http://www.lighthouselabs.ca", userID: "user2RandomID"},
-  "9sm5xK": {longURL: "http://www.google.com", userID: "user2RandomID"}
-};
+const users = {};
+const urlDatabase = {};
 
 app.get("/", (req, res) => {
   res.redirect("/urls");
@@ -75,6 +60,7 @@ app.get("/login", (req, res) => {
 app.post("/registration", (req, res) => {
   if (req.body.email === "" || req.body.password === "") {
     res.send("Error 400");
+    return;
   };
   if (!getUserByEmail(req.body.email, users)) {
     const tempUserID = generateNewShortUrl();
@@ -83,6 +69,7 @@ app.post("/registration", (req, res) => {
     res.redirect("/urls");
   } else {
     res.send("Email already exists")
+    return;
   }
 });
 

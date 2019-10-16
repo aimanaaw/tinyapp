@@ -7,22 +7,16 @@ const getUserByEmail = function(checkEmail, database) {
 }
 
 const checkURLOwner = function(id, someURL, urlDatabase) {
-    if (urlDatabase[someURL].userID === id) {
-      return true;
-    } else {
-      return false;
-    }
+  return urlDatabase[someURL].userID === id
 }
 
 const urlsOwnedByUser = function (id, urlDatabase) {
   let URLOfUser = {};
   for(let url in urlDatabase) {
     if(urlDatabase[url].userID === id) {
-      console.log(url);
       URLOfUser[url] = urlDatabase[url].longURL;
     }
   }
-  console.log(URLOfUser);
   return URLOfUser;
 }
 
